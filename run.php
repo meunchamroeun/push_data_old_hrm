@@ -160,7 +160,8 @@ function runCycle(
         $logger,
         $config['api']['method'] ?? 'POST',
         (int)($config['api']['delay_ms'] ?? 30),
-        (int)($config['api']['retry_429'] ?? 2)
+        (int)($config['api']['retry_429'] ?? 2),
+        (string)($config['api']['confirm_mode'] ?? 'strict')
     );
 
     $logger->separator("CYCLE START  |  Range: $rangeLabel");
