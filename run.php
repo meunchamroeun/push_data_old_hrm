@@ -229,6 +229,11 @@ function runCycle(
 $logger->separator("Fingerprint Push Service");
 $logger->info("MAIN", "PHP " . PHP_VERSION . " | Mode: " . ($loopMode ? 'LOOP' : 'ONCE') . " | Range: $rangeLabel");
 $logger->info("MAIN", "Driver: " . strtoupper($driverMode));
+$confirmMode = strtolower((string)($config['api']['confirm_mode'] ?? 'strict'));
+$logger->info("MAIN", "Confirm mode: " . strtoupper($confirmMode));
+if ($confirmMode === 'legacy') {
+    $logger->warn("MAIN", "LEGACY mode: [OK] means API HTTP 200, not guaranteed DB insert.");
+}
 if ($onlyDevice) {
     $logger->info("MAIN", "Filter: Device #$onlyDevice only");
 }

@@ -70,21 +70,22 @@ class ApiPusher
         curl_close($ch);
 
         if ($curlError) {
-            return [false, "NETWORK_ERROR: " . $this->cleanText($curlError)];
+            return [false, "NETWORK_ERROR: " . $this->cleanText($curlError), false];
         }
         if ($httpCode !== 200) {
             $msg = $this->extractHttpError($httpCode, (string)$response);
-            return [false, $msg];
+            return [false, $msg, false];
         }
         $resp = trim((string)$response);
+        $dbConfirmed = $this->isDbInsertConfirmed($resp);
         if ($this->confirmMode === 'legacy') {
-            return [true, $resp];
+            return [true, $resp, $dbConfirmed];
         }
-        if (!$this->isDbInsertConfirmed($resp)) {
-            return [false, "DB_NOT_CONFIRMED: " . $this->cleanText($resp)];
+        if (!$dbConfirmed) {
+            return [false, "DB_NOT_CONFIRMED: " . $this->cleanText($resp), false];
         }
 
-        return [true, $resp];
+        return [true, $resp, true];
     }
 
     /**
@@ -102,6 +103,8 @@ class ApiPusher
 
         $total   = count($records);
         $success = 0;
+        $successDbConfirmed = 0;
+        $successApiOnly = 0;
         $failed  = 0;
         $failReasons = [];
 
@@ -112,8 +115,9 @@ class ApiPusher
             $attempt = 0;
             $ok = false;
             $apiResp = '';
+            $dbConfirmed = false;
             do {
-                [$ok, $apiResp] = $this->pushOne($rec);
+                [$ok, $apiResp, $dbConfirmed] = $this->pushOne($rec);
                 if ($ok) break;
                 if (strpos((string)$apiResp, 'RATE_LIMIT_429:') !== 0) break;
                 if ($attempt >= $this->retry429) break;
@@ -123,11 +127,18 @@ class ApiPusher
 
             if ($ok) {
                 $success++;
-                $this->logger->record($rec, 'OK', $apiResp);
+                if ($dbConfirmed) {
+                    $successDbConfirmed++;
+                    $this->logger->record($rec, 'OK', 'DB_CONFIRMED | ' . ($apiResp === '' ? '-' : $this->cleanText($apiResp)));
+                } else {
+                    $successApiOnly++;
+                    $this->logger->record($rec, 'OK', 'API_OK_ONLY | ' . ($apiResp === '' ? '(empty response)' : $this->cleanText($apiResp)));
+                }
             } else {
                 $failed++;
                 $key = $this->classifyReason($apiResp);
                 $failReasons[$key] = isset($failReasons[$key]) ? $failReasons[$key] + 1 : 1;
+                $this->logger->record($rec, 'FAIL', $apiResp);
             }
 
             // Small delay to avoid server flood
@@ -136,6 +147,7 @@ class ApiPusher
 
         $this->logger->separator("Summary");
         $this->logger->success("PUSH", "Done $deviceName → Total: $total | ✓ Success: $success | ✗ Failed: $failed");
+        $this->logger->info("PUSH", "Success detail: DB_CONFIRMED={$successDbConfirmed} | API_OK_ONLY={$successApiOnly}");
         if (!empty($failReasons)) {
             foreach ($failReasons as $reason => $count) {
                 $this->logger->warn("PUSH", "Fail reason: {$reason} | Count: {$count}");
