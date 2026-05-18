@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<dbs>
+    <db>
+        <server>localhost</server>
+		<database>harta</database>
+		<uid>root</uid>
+		<password></password>	
+		<reconnect>300</reconnect>
+		<url>http://harta.cxpress.net/api/HR_CHECK-IN-OUT_FROM_FINGERPRINT_API2_Harta.PHP</url>
+		
+		<url_csv>http://harta.cxpress.net/</url_csv>
+		<run_h>8</run_h>
+		<run_m>27</run_m>
+    </db>
+</dbs>

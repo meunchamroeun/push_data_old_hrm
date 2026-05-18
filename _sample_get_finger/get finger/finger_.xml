@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<fingers>
+  <finger>
+    <MachineNumber>1</MachineNumber>
+    <ip>192.168.3.230</ip>
+    <port>4370</port>
+    <status>Disconnected</status>
+  </finger>
+</fingers>  
